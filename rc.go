@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-redis/redis"
@@ -140,6 +141,27 @@ func (c *Client) getReadyKeys() ([]string, error) {
 	}
 
 	return fk, nil
+}
+
+func filterTimestamps(pattern string, ts []string) ([]string, error) {
+	var r []string
+
+	ct := time.Now().UTC().Unix()
+
+	for _, k := range ts {
+		slots := strings.Split(k, fmt.Sprintf("%s-", pattern))
+		i, err := strconv.ParseInt(slots[1], base10, 64)
+		if err != nil {
+			return nil, err
+		}
+
+		if i <= ct {
+			r = append(r, k)
+		}
+	}
+
+	return r, nil
+
 }
 
 // getTriggers returns decoded triggers by the key
