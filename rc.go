@@ -21,7 +21,8 @@ type Triggers []*Trigger
 // Client defines a trigger client struct
 // with a redis client
 type Client struct {
-	c *redis.Client
+	c       *redis.Client
+	methods map[string]func()
 }
 
 // Trigger defines a struct for trigger of schedules
@@ -51,7 +52,8 @@ func NewClient(options *ClientOptions) *Client {
 	}
 
 	return &Client{
-		c: c,
+		c:       c,
+		methods: map[string]func(){},
 	}
 
 }
