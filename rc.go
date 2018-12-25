@@ -26,8 +26,9 @@ type Client struct {
 
 // Trigger defines a struct for trigger of schedules
 type Trigger struct {
-	DateTime       time.Time
-	SubscriptionID string
+	DateTime  time.Time
+	Namespace string
+	Func      func()
 }
 
 func (t *Trigger) encode() ([]byte, error) {
