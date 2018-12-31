@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"log"
 
 	"github.com/go-redis/redis"
 )
@@ -94,8 +95,19 @@ func (c *Client) RemoveTrigger(key string, t *Trigger) error {
 	return nil
 }
 
-// GetReadyTriggers returns decoded ready triggers
-func (c *Client) GetReadyTriggers() error {
+// Start provides starting of app
+func (c *Client) Start() {
+	for {
+		err := c.getReadyTriggers()
+		if err != nil {
+			log.Printf("unable to get ready triggers: %v", err)
+		}
+		time.Sleep(1 * time.Second)
+	}
+}
+
+// getReadyTriggers returns decoded ready triggers
+func (c *Client) getReadyTriggers() error {
 
 	readyKeys, err := c.getReadyKeys()
 	if err != nil {
