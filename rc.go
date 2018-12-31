@@ -42,8 +42,8 @@ type ClientOptions struct {
 	Options redis.Options
 }
 
-// NewClient provides init of the new trigger client
-func NewClient(options *ClientOptions) *Client {
+// New provides init of the new trigger client
+func New(options *ClientOptions) *Client {
 
 	c := redis.NewClient(&options.Options)
 	_, err := c.Ping().Result()
