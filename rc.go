@@ -3,10 +3,10 @@ package rc
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 	"time"
-	"log"
 
 	"github.com/go-redis/redis"
 )
@@ -24,6 +24,7 @@ type Triggers []*Trigger
 type Client struct {
 	c       *redis.Client
 	methods map[string]func()
+	pattern string
 }
 
 // Trigger defines a struct for trigger of schedules
@@ -41,6 +42,7 @@ func (t *Trigger) encode() ([]byte, error) {
 // with redis options
 type ClientOptions struct {
 	Options redis.Options
+	Pattern string
 }
 
 // New provides init of the new trigger client
@@ -51,10 +53,14 @@ func New(options *ClientOptions) *Client {
 	if err != nil {
 		panic(fmt.Errorf("unable to ping redis: %v", err))
 	}
-
+	pattern := options.Pattern
+	if pattern == "" {
+		pattern = "rc-*"
+	}
 	return &Client{
 		c:       c,
 		methods: map[string]func(){},
+		pattern: pattern,
 	}
 
 }
@@ -62,7 +68,7 @@ func New(options *ClientOptions) *Client {
 // AddTrigger provides append inserting of the new trigger
 // to the Redis SET. Its based on the key
 // empty-slots-timestamp and namespace
-func (c *Client) AddTrigger(ns string, t *Trigger) error {
+func (c *Client) AddTrigger(t *Trigger) error {
 
 	encodedT, err := t.encode()
 	if err != nil {
@@ -120,7 +126,7 @@ func (c *Client) getReadyTriggers() error {
 
 func (c *Client) checkReadyKeys(readyKeys []string) error {
 	for _, k := range readyKeys {
-		ts, err := c.getTriggers(k)
+		_, err := c.getTriggers(k)
 		if err != nil {
 			continue
 		}
@@ -136,21 +142,18 @@ func (c *Client) updateTrigger(key string, t *Trigger) error {
 		return fmt.Errorf("unable to remove trigger: %v", err)
 	}
 
-	return c.AddTrigger(&Trigger{
-		SubscriptionID: t.SubscriptionID,
-		DateTime:       time.Now().UTC().Add(500 * time.Minute),
-	})
+	return c.AddTrigger(&Trigger{})
 }
 
 // getReadyKeys returns ready keys based on pattern and time
 func (c *Client) getReadyKeys() ([]string, error) {
 
-	cmd := c.c.Keys(pattern)
+	cmd := c.c.Keys(c.pattern)
 	if cmd.Err() != nil {
 		return nil, fmt.Errorf("unable to get keys: %v", cmd.Err())
 	}
 
-	fk, err := filterTimestamps(cmd.Val())
+	fk, err := filterTimestamps(c.pattern, cmd.Val())
 	if err != nil {
 		return nil, err
 	}
@@ -209,14 +212,6 @@ func (c *Client) decode(s string) (*Trigger, error) {
 	}
 
 	return t, nil
-
-}
-
-func (c *Client) findReadyTriggers() {
-	err := c.GetReadyTriggers()
-	if err != nil {
-		fmt.Printf("Unable to get ready keys: %v", err)
-	}
 
 }
 
